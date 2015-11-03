@@ -22,11 +22,9 @@ var hasCommonJSExport;
 var lifeBindings = {};
 var universalAccessors = {};
 
-
-module.exports = function(pluginArguments) {
-	var Plugin = pluginArguments.Plugin;
+module.exports = function (pluginArguments) {
 	var t = pluginArguments.types;
-	return new Plugin("rewire", {
+	return {
 		visitor: {
 			Program: (function () {
 				function initializeUniversalAccessors(scope) {
@@ -53,7 +51,11 @@ module.exports = function(pluginArguments) {
 				}
 
 				return {
-					enter: function (node, parent, scope) {
+					enter: function (path) {
+						var node = path.node;
+						var parent = path.parent;
+						var scope = path.scope;
+
 						initializeUniversalAccessors(scope);
 						var universalGetter = t.functionDeclaration(
 							noRewire(getUniversalGetterID()),
@@ -103,7 +105,10 @@ module.exports = function(pluginArguments) {
 
 						return node;
 					},
-					exit: function (node, parent, scope, file) {
+					exit: function exit(path, file) {
+						var node = path.node;
+						var parent = path.parent;
+						var scope = path.scope;
 
 						var exports;
 
@@ -164,8 +169,12 @@ module.exports = function(pluginArguments) {
 				}
 			})(),
 
-			ExpressionStatement: function(node, parent, scope) {
-				if(parent.sourceType === 'module' && !!node.expression && node.expression.type === 'AssignmentExpression') {
+			ExpressionStatement: function ExpressionStatement(path) {
+				var node = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
+
+				if (parent.sourceType === 'module' && !!node.expression && node.expression.type === 'AssignmentExpression') {
 					var assignmentExpression = node.expression;
 
 					if(!!assignmentExpression.left.object && assignmentExpression.left.object.name === 'module' && !!assignmentExpression.left.property && assignmentExpression.left.property.name === 'exports') {
@@ -176,7 +185,11 @@ module.exports = function(pluginArguments) {
 
 			},
 
-			VariableDeclaration: function (node, parent, scope) {
+			VariableDeclaration: function VariableDeclaration(path) {
+				var node = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
+
 				var variableDeclarations = [];
 				var accessors = [];
 
@@ -220,8 +233,12 @@ module.exports = function(pluginArguments) {
 			 * Functions are replaced by a temporary function declaration and an assignment to a variable with the same name as the original function
 			 * The actual rewireing functionality is added by The Handler for VariableDeclarations which creates a temporary variable and accessors for setting resetting the function.
 			 */
-			FunctionDeclaration: function(declaration, parent, scope) {
-				if((parent.type !== 'ExportNamedDeclaration' && parent.sourceType !== 'module') || declaration.id.__noRewire || !declaration.id.name || declaration.id.name.length == 0) {
+			FunctionDeclaration: function FunctionDeclaration(path) {
+				var declaration = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
+
+				if (parent.type !== 'ExportNamedDeclaration' && parent.sourceType !== 'module' || declaration.id.__noRewire || !declaration.id.name || declaration.id.name.length == 0) {
 					return declaration;
 				}
 
@@ -240,7 +257,10 @@ module.exports = function(pluginArguments) {
 				}
 			},
 
-			Identifier: function(node, parent, scope, file) {
+			Identifier: function Identifier(path, file) {
+				var node = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
 
 				var isLiveBindingActive = lifeBindings[node.name] === true;
 				if(isLiveBindingActive && !node.__noRewire && !node.noLifeBinding
@@ -256,7 +276,11 @@ module.exports = function(pluginArguments) {
 				return node;
 			},
 
-			ImportDeclaration: function (node, parent, scope, file) {
+			ImportDeclaration: function ImportDeclaration(path, file) {
+				var node = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
+
 				isES6Module = true;
 				var variableDeclarations = [];
 				var accessors = [];
@@ -300,8 +324,10 @@ module.exports = function(pluginArguments) {
 			},
 
 			'ExportNamedDeclaration|ExportAllDeclaration': {
-				enter: function (node) {
-					var hasDefaultExport = node.specifiers.some(function(specifier) {
+				enter: function enter(path) {
+					var node = path.node;
+
+					var hasDefaultExport = node.specifiers.some(function (specifier) {
 						return specifier.local.name === 'default';
 					});
 					if(hasDefaultExport) {
@@ -316,8 +342,12 @@ module.exports = function(pluginArguments) {
 				}
 			},
 
-			ExportDefaultDeclaration: function (node, parent, scope) {
-				if(!!node.rewired) {
+			ExportDefaultDeclaration: function ExportDefaultDeclaration(path) {
+				var node = path.node;
+				var parent = path.parent;
+				var scope = path.scope;
+
+				if (!!node.rewired) {
 					return node;
 				}
 				hasES6DefaultExport = true;
@@ -366,7 +396,7 @@ module.exports = function(pluginArguments) {
 				return [defaultExportVariableDeclaration, addAdditionalProperties, defaultExport];
 			}
 		}
-	});
+	}
 }
 
 function addNonEnumerableProperty(t, objectIdentifier, propertyName, valueIdentifier) {
