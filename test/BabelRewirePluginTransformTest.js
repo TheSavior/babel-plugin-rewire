@@ -8,8 +8,6 @@ var expect = require('expect.js');
 describe('BabelRewirePluginTest', function() {
 
 	var babelTranslationOptions = {
-		blacklist: 'es6.modules',
-		whitelist: [ 'strict' ],
 		plugins: path.resolve(__dirname, '../src/babel-plugin-rewire.js')
 	};
 
